@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Asteroid Sweeper</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&family=Rajdhani:wght@400;600&display=swap');
+
+        body {
+            background-color: #0f172a;
+            font-family: 'Rajdhani', sans-serif;
+            color: #e2e8f0;
+            overflow: hidden; /* Prevent scrolling on mobile during game */
+            touch-action: manipulation;
+        }
+
+        .hud-font {
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        /* Starfield Background Animation */
+        .stars {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+            background: radial-gradient(ellipse at bottom, #1b2735 0%, #090a0f 100%);
+        }
+        
+        .star {
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+            animation: twinkle 2s infinite ease-in-out;
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.3; transform: scale(0.8); }
+            50% { opacity: 1; transform: scale(1.2); }
+        }
+
+        /* 3D Canvas Layer */
+        #explosion-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 40; /* Above grid, below overlay */
+            pointer-events: none;
+            display: none;
+        }
+
+        /* Screen Crack Overlay */
+        #crack-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 60; /* Topmost layer */
+            pointer-events: none; /* Let clicks pass through */
+            opacity: 0;
+            transition: opacity 1s ease-out;
+        }
+
+        /* Grid Cell Styling */
+        .cell {
+            transition: all 0.1s ease;
+            user-select: none;
+            -webkit-user-select: none;
+            aspect-ratio: 1;
+        }
+
+        .cell:active {
+            transform: scale(0.95);
+        }
+
+        .cell-hidden {
+            background: linear-gradient(135deg, #334155, #1e293b);
+            border: 1px solid #475569;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.1);
+        }
+
+        .cell-hidden:hover {
+            background: linear-gradient(135deg, #475569, #334155);
+        }
+
+        .cell-revealed {
+            background-color: #0f172a;
+            border: 1px solid #1e293b;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        /* Number Colors */
+        .val-1 { color: #60a5fa; text-shadow: 0 0 5px rgba(96, 165, 250, 0.5); }
+        .val-2 { color: #34d399; text-shadow: 0 0 5px rgba(52, 211, 153, 0.5); }
+        .val-3 { color: #f87171; text-shadow: 0 0 5px rgba(248, 113, 113, 0.5); }
+        .val-4 { color: #a78bfa; }
+        .val-5 { color: #fbbf24; }
+        .val-6 { color: #38bdf8; }
+        .val-7 { color: #e879f9; }
+        .val-8 { color: #94a3b8; }
+
+        .mine-hit {
+            background-color: #7f1d1d !important;
+            border-color: #ef4444 !important;
+            animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+        }
+
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-1px, 0, 0); }
+            20%, 80% { transform: translate3d(2px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+            40%, 60% { transform: translate3d(4px, 0, 0); }
+        }
+
+        /* Toggle Switch for Mobile Mode */
+        .mode-btn.active {
+            background-color: #3b82f6;
+            color: white;
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
+            border-color: #60a5fa;
+        }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569; 
+        }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col items-center justify-between p-4 relative">
+
+    <!-- Background Stars -->
+    <div id="starfield" class="stars"></div>
+    
+    <!-- 3D Explosion Canvas -->
+    <div id="explosion-canvas"></div>
+
+    <!-- Crack Overlay -->
+    <div id="crack-overlay" class="hidden">
+        <svg id="crack-svg" width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none">
+            <defs>
+                <filter id="glow">
+                    <feGaussianBlur stdDeviation="0.5" result="coloredBlur"/>
+                    <feMerge>
+                        <feMergeNode in="coloredBlur"/>
+                        <feMergeNode in="SourceGraphic"/>
+                    </feMerge>
+                </filter>
+            </defs>
+            <path id="crack-path" d="" stroke="rgba(200, 230, 255, 0.7)" stroke-width="0.3" fill="none" vector-effect="non-scaling-stroke" filter="url(#glow)"/>
+            <path id="crack-highlight" d="" stroke="rgba(255, 255, 255, 0.4)" stroke-width="0.1" fill="none" vector-effect="non-scaling-stroke"/>
+        </svg>
+    </div>
+
+    <!-- Header / HUD -->
+    <div class="w-full max-w-lg z-10 flex flex-col gap-4">
+        <div class="flex justify-between items-center bg-slate-800/80 backdrop-blur-md p-4 rounded-xl border border-slate-700 shadow-xl">
+            <div class="flex flex-col">
+                <h1 class="hud-font text-xl md:text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-blue-500 tracking-wider uppercase">
+                    Asteroid Sweeper
+                </h1>
+                <div class="text-xs text-slate-400 tracking-widest">SECTOR SCANNER ONLINE</div>
+            </div>
+            
+            <button onclick="initGame()" class="group relative px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg border border-slate-500 transition-all active:scale-95">
+                <i class="fas fa-redo text-cyan-400 group-hover:rotate-180 transition-transform duration-500"></i>
+            </button>
+        </div>
+
+        <!-- Stats Bar -->
+        <div class="grid grid-cols-3 gap-3">
+            <div class="bg-slate-900/90 p-3 rounded-lg border border-slate-700 flex flex-col items-center justify-center shadow-lg">
+                <span class="text-xs text-slate-500 uppercase tracking-widest mb-1">Asteroids</span>
+                <span id="mine-count" class="hud-font text-2xl text-red-400 font-mono">010</span>
+            </div>
+            
+            <div class="bg-slate-900/90 p-3 rounded-lg border border-slate-700 flex flex-col items-center justify-center shadow-lg cursor-pointer hover:bg-slate-800 transition-colors" onclick="toggleDifficulty()">
+                <span class="text-xs text-slate-500 uppercase tracking-widest mb-1">Level</span>
+                <span id="difficulty-display" class="hud-font text-xl text-yellow-400">EASY</span>
+            </div>
+
+            <div class="bg-slate-900/90 p-3 rounded-lg border border-slate-700 flex flex-col items-center justify-center shadow-lg">
+                <span class="text-xs text-slate-500 uppercase tracking-widest mb-1">Time</span>
+                <span id="timer" class="hud-font text-2xl text-cyan-400 font-mono">000</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Grid Container -->
+    <div class="flex-1 flex items-center justify-center w-full max-w-2xl z-10 my-4 overflow-hidden relative">
+        <div class="relative bg-slate-900/50 p-1 md:p-4 rounded-xl border border-slate-700/50 backdrop-blur-sm shadow-2xl overflow-auto max-h-full max-w-full">
+            <div id="game-grid" class="grid gap-1 mx-auto touch-manipulation">
+                <!-- Grid generated by JS -->
+            </div>
+            
+            <!-- Game Over / Win Overlay -->
+            <div id="game-overlay" class="hidden absolute inset-0 bg-slate-900/90 backdrop-blur flex flex-col items-center justify-center z-50 rounded-lg">
+                <div id="overlay-icon" class="text-6xl mb-4 animate-bounce"></div>
+                <h2 id="overlay-title" class="hud-font text-3xl font-bold mb-2 text-center px-4"></h2>
+                <p id="overlay-msg" class="text-slate-400 mb-6 text-center px-8 font-mono"></p>
+                <button onclick="initGame()" class="px-8 py-3 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold rounded-lg shadow-lg shadow-cyan-500/20 transform hover:-translate-y-1 transition-all">
+                    RESCAN SECTOR
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Controls (Mobile/Desktop) -->
+    <div class="w-full max-w-lg z-10 mb-4 px-4">
+        <!-- Desktop Instructions -->
+        <div class="hidden md:flex justify-between text-sm text-slate-400 font-mono bg-slate-900/50 p-2 rounded border border-slate-800">
+            <span><i class="fas fa-mouse-pointer text-cyan-400 mr-2"></i>Left Click: Scan</span>
+            <span><i class="fas fa-flag text-red-400 mr-2"></i>Right Click: Flag</span>
+        </div>
+
+        <!-- Mobile Toggle Switch -->
+        <div class="flex md:hidden bg-slate-800 p-1 rounded-xl shadow-lg border border-slate-600">
+            <button id="mode-scan" class="mode-btn active flex-1 py-3 rounded-lg flex items-center justify-center gap-2 transition-all" onclick="setMode('scan')">
+                <i class="fas fa-crosshairs"></i> SCAN
+            </button>
+            <button id="mode-flag" class="mode-btn flex-1 py-3 rounded-lg flex items-center justify-center gap-2 transition-all" onclick="setMode('flag')">
+                <i class="fas fa-flag"></i> FLAG
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // --- Constants & Config ---
+        const DIFFICULTIES = {
+            EASY: { rows: 9, cols: 9, mines: 10, label: 'EASY' },
+            MEDIUM: { rows: 16, cols: 16, mines: 40, label: 'MED' },
+            HARD: { rows: 16, cols: 30, mines: 99, label: 'HARD' }
+        };
+
+        // --- State ---
+        let currentDiff = DIFFICULTIES.EASY;
+        let grid = [];
+        let gameActive = false;
+        let minesLeft = 0;
+        let timeElapsed = 0;
+        let timerInterval = null;
+        let firstClick = true;
+        let inputMode = 'scan'; // 'scan' or 'flag' (for mobile)
+        let revealedCount = 0;
+        let totalCells = 0;
+        let threeJsActive = false;
+        let renderer, scene, camera, asteroid, particles;
+        let animationId;
+        let crackTimeout = null;
+
+        // --- DOM Elements ---
+        const gridEl = document.getElementById('game-grid');
+        const mineCountEl = document.getElementById('mine-count');
+        const timerEl = document.getElementById('timer');
+        const diffDisplayEl = document.getElementById('difficulty-display');
+        const overlay = document.getElementById('game-overlay');
+        const overlayTitle = document.getElementById('overlay-title');
+        const overlayMsg = document.getElementById('overlay-msg');
+        const overlayIcon = document.getElementById('overlay-icon');
+        const explosionCanvasContainer = document.getElementById('explosion-canvas');
+        const crackOverlay = document.getElementById('crack-overlay');
+
+        // --- Initialization ---
+        function initStars() {
+            const container = document.getElementById('starfield');
+            for(let i=0; i<50; i++) {
+                const star = document.createElement('div');
+                star.className = 'star';
+                star.style.width = Math.random() * 3 + 'px';
+                star.style.height = star.style.width;
+                star.style.top = Math.random() * 100 + '%';
+                star.style.left = Math.random() * 100 + '%';
+                star.style.animationDelay = Math.random() * 2 + 's';
+                container.appendChild(star);
+            }
+        }
+
+        function initGame() {
+            // Reset State
+            clearInterval(timerInterval);
+            if (threeJsActive) cancelAnimationFrame(animationId);
+            threeJsActive = false;
+            explosionCanvasContainer.innerHTML = ''; // Clean up ThreeJS
+            explosionCanvasContainer.style.display = 'none';
+            
+            // Reset Crack
+            clearTimeout(crackTimeout);
+            crackOverlay.classList.add('hidden');
+            crackOverlay.style.opacity = '0';
+
+            gameActive = true;
+            firstClick = true;
+            grid = [];
+            timeElapsed = 0;
+            revealedCount = 0;
+            totalCells = currentDiff.rows * currentDiff.cols;
+            minesLeft = currentDiff.mines;
+
+            // UI Reset
+            timerEl.innerText = "000";
+            updateMineCounter();
+            overlay.classList.add('hidden');
+            
+            // Adjust Grid CSS for columns
+            gridEl.style.gridTemplateColumns = `repeat(${currentDiff.cols}, minmax(0, 1fr))`;
+            
+            // Generate Grid
+            gridEl.innerHTML = '';
+            for (let r = 0; r < currentDiff.rows; r++) {
+                const row = [];
+                for (let c = 0; c < currentDiff.cols; c++) {
+                    const cell = {
+                        r, c,
+                        isMine: false,
+                        isRevealed: false,
+                        isFlagged: false,
+                        neighborMines: 0,
+                        element: document.createElement('div')
+                    };
+                    
+                    cell.element.className = 'cell cell-hidden flex items-center justify-center text-sm md:text-lg font-bold cursor-pointer';
+                    // Sizing logic based on difficulty to fit screen
+                    const sizeClass = currentDiff === DIFFICULTIES.HARD ? 'w-6 h-6 md:w-8 md:h-8' : 'w-8 h-8 md:w-10 md:h-10';
+                    cell.element.classList.add(...sizeClass.split(' '));
+                    
+                    // Event Listeners
+                    cell.element.onmousedown = (e) => handleCellClick(e, r, c);
+                    cell.element.oncontextmenu = (e) => {
+                        e.preventDefault();
+                    };
+
+                    gridEl.appendChild(cell.element);
+                    row.push(cell);
+                }
+                grid.push(row);
+            }
+        }
+
+        function toggleDifficulty() {
+            if (currentDiff === DIFFICULTIES.EASY) currentDiff = DIFFICULTIES.MEDIUM;
+            else if (currentDiff === DIFFICULTIES.MEDIUM) currentDiff = DIFFICULTIES.HARD;
+            else currentDiff = DIFFICULTIES.EASY;
+            
+            diffDisplayEl.innerText = currentDiff.label;
+            initGame();
+        }
+
+        function setMode(mode) {
+            inputMode = mode;
+            document.getElementById('mode-scan').classList.toggle('active', mode === 'scan');
+            document.getElementById('mode-scan').classList.toggle('bg-slate-700', mode !== 'scan');
+            document.getElementById('mode-flag').classList.toggle('active', mode === 'flag');
+            document.getElementById('mode-flag').classList.toggle('bg-slate-700', mode !== 'flag');
+        }
+
+        // --- Game Logic ---
+        function placeMines(safeR, safeC) {
+            let minesPlaced = 0;
+            while (minesPlaced < currentDiff.mines) {
+                const r = Math.floor(Math.random() * currentDiff.rows);
+                const c = Math.floor(Math.random() * currentDiff.cols);
+
+                // Don't place mine on the first clicked cell or its neighbors
+                if (!grid[r][c].isMine && (Math.abs(r - safeR) > 1 || Math.abs(c - safeC) > 1)) {
+                    grid[r][c].isMine = true;
+                    minesPlaced++;
+                }
+            }
+            calculateNeighbors();
+        }
+
+        function calculateNeighbors() {
+            const directions = [[-1,-1], [-1,0], [-1,1], [0,-1], [0,1], [1,-1], [1,0], [1,1]];
+            for (let r = 0; r < currentDiff.rows; r++) {
+                for (let c = 0; c < currentDiff.cols; c++) {
+                    if (grid[r][c].isMine) continue;
+                    let count = 0;
+                    directions.forEach(([dr, dc]) => {
+                        const nr = r + dr, nc = c + dc;
+                        if (nr >= 0 && nr < currentDiff.rows && nc >= 0 && nc < currentDiff.cols && grid[nr][nc].isMine) {
+                            count++;
+                        }
+                    });
+                    grid[r][c].neighborMines = count;
+                }
+            }
+        }
+
+        function handleCellClick(e, r, c) {
+            if (!gameActive) return;
+            if (e.button === 2 || (e.button === 0 && inputMode === 'flag')) {
+                toggleFlag(r, c);
+                return;
+            }
+            if (e.button === 0) {
+                if (grid[r][c].isFlagged) return; 
+                if (firstClick) {
+                    firstClick = false;
+                    placeMines(r, c);
+                    startTimer();
+                }
+                revealCell(r, c);
+            }
+        }
+
+        function toggleFlag(r, c) {
+            if (!gameActive || grid[r][c].isRevealed) return;
+            const cell = grid[r][c];
+            cell.isFlagged = !cell.isFlagged;
+            if (cell.isFlagged) {
+                cell.element.innerHTML = '<i class="fas fa-flag text-red-500 text-xs md:text-sm"></i>';
+                minesLeft--;
+                if (navigator.vibrate) navigator.vibrate(50);
+            } else {
+                cell.element.innerHTML = '';
+                minesLeft++;
+            }
+            updateMineCounter();
+        }
+
+        function revealCell(r, c) {
+            const cell = grid[r][c];
+            if (cell.isRevealed || cell.isFlagged) return;
+
+            cell.isRevealed = true;
+            revealedCount++;
+            cell.element.classList.remove('cell-hidden');
+            cell.element.classList.add('cell-revealed', 'cursor-default');
+
+            if (cell.isMine) {
+                gameOver(false, r, c);
+                return;
+            }
+
+            if (cell.neighborMines > 0) {
+                cell.element.innerText = cell.neighborMines;
+                cell.element.classList.add(`val-${cell.neighborMines}`);
+            } else {
+                const directions = [[-1,-1], [-1,0], [-1,1], [0,-1], [0,1], [1,-1], [1,0], [1,1]];
+                directions.forEach(([dr, dc]) => {
+                    const nr = r + dr, nc = c + dc;
+                    if (nr >= 0 && nr < currentDiff.rows && nc >= 0 && nc < currentDiff.cols) {
+                        revealCell(nr, nc);
+                    }
+                });
+            }
+            checkWin();
+        }
+
+        function checkWin() {
+            const safeCells = totalCells - currentDiff.mines;
+            if (revealedCount === safeCells) {
+                gameOver(true);
+            }
+        }
+
+        function startTimer() {
+            timerInterval = setInterval(() => {
+                timeElapsed++;
+                timerEl.innerText = timeElapsed.toString().padStart(3, '0');
+            }, 1000);
+        }
+
+        function updateMineCounter() {
+            mineCountEl.innerText = minesLeft.toString().padStart(3, '0');
+        }
+
+        function gameOver(win, hitR, hitC) {
+            gameActive = false;
+            clearInterval(timerInterval);
+
+            grid.forEach(row => {
+                row.forEach(cell => {
+                    if (cell.isMine) {
+                        if (win) {
+                            cell.element.innerHTML = '<i class="fas fa-check text-green-400 text-xs md:text-sm"></i>';
+                            cell.element.style.borderColor = '#4ade80';
+                        } else {
+                            if (cell.r === hitR && cell.c === hitC) {
+                                cell.element.classList.add('mine-hit');
+                                cell.element.innerHTML = '<i class="fas fa-meteor text-white text-sm md:text-base animate-pulse"></i>';
+                            } else {
+                                cell.element.classList.remove('cell-hidden');
+                                cell.element.classList.add('bg-slate-800');
+                                cell.element.innerHTML = '<i class="fas fa-meteor text-slate-500 text-xs md:text-sm"></i>';
+                            }
+                        }
+                    } else if (cell.isFlagged && !cell.isMine) {
+                        cell.element.innerHTML = '<i class="fas fa-times text-red-900"></i>';
+                        cell.element.classList.add('bg-red-200');
+                    }
+                });
+            });
+
+            if (win) {
+                setTimeout(() => {
+                    overlay.classList.remove('hidden');
+                    overlayTitle.innerText = "SECTOR CLEARED";
+                    overlayTitle.className = "hud-font text-3xl font-bold mb-2 text-center px-4 text-green-400";
+                    overlayMsg.innerText = `Mission accomplished in ${timeElapsed} seconds.`;
+                    overlayIcon.innerHTML = "🚀";
+                }, 500);
+            } else {
+                trigger3DExplosion();
+            }
+        }
+
+        // --- FX Logic ---
+
+        function triggerCrack() {
+            const pathEl = document.getElementById('crack-path');
+            const highlightEl = document.getElementById('crack-highlight');
+            
+            // Procedurally generate a jagged crack path
+            let d = "";
+            const centerX = 50; // SVG coordinates are 0-100
+            const centerY = 50;
+            
+            // 6-8 main branches for the impact
+            const branches = 6 + Math.floor(Math.random() * 3);
+            
+            for(let i=0; i<branches; i++) {
+                // Spread branches around circle
+                const angle = (i / branches) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
+                let curX = centerX;
+                let curY = centerY;
+                
+                d += `M${curX} ${curY} `;
+                
+                // Each branch has 3-5 jagged segments
+                const segments = 3 + Math.floor(Math.random() * 3);
+                for(let j=0; j<segments; j++) {
+                    const dist = 8 + Math.random() * 12; // Length of segment
+                    const deviation = (Math.random() - 0.5) * 1.0; // Angle jitter
+                    
+                    curX += Math.cos(angle + deviation) * dist;
+                    curY += Math.sin(angle + deviation) * dist;
+                    
+                    d += `L${curX.toFixed(1)} ${curY.toFixed(1)} `;
+                    
+                    // Occasionally add a small side fracture
+                    if (Math.random() > 0.7) {
+                        const sideDist = 5 + Math.random() * 5;
+                        const sideAngle = angle + (Math.random() > 0.5 ? 1 : -1);
+                        d += `L${(curX + Math.cos(sideAngle)*sideDist).toFixed(1)} ${(curY + Math.sin(sideAngle)*sideDist).toFixed(1)} M${curX.toFixed(1)} ${curY.toFixed(1)} `;
+                    }
+                }
+            }
+            
+            pathEl.setAttribute('d', d);
+            highlightEl.setAttribute('d', d);
+            
+            // Show Overlay
+            crackOverlay.classList.remove('hidden');
+            // Slight delay to allow transition to trigger if we wanted fade-in, but cracks are instant
+            crackOverlay.style.opacity = '1';
+            
+            // Auto-mend logic
+            if (crackTimeout) clearTimeout(crackTimeout);
+            
+            crackTimeout = setTimeout(() => {
+                // Fade out
+                crackOverlay.style.opacity = '0';
+                setTimeout(() => {
+                    crackOverlay.classList.add('hidden');
+                }, 1000); // Wait for 1s transition
+            }, 3000); // 3 seconds visible
+        }
+
+        // --- Three.js Animation ---
+        function trigger3DExplosion() {
+            const container = document.getElementById('explosion-canvas');
+            container.style.display = 'block';
+            threeJsActive = true;
+
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+            
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setClearColor(0x000000, 0); // Transparent background
+            container.appendChild(renderer.domElement);
+
+            // Lights
+            const ambientLight = new THREE.AmbientLight(0x404040, 2);
+            scene.add(ambientLight);
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 2);
+            directionalLight.position.set(1, 1, 1);
+            scene.add(directionalLight);
+
+            // --- Helper: Generate Procedural Rock Texture ---
+            function createAsteroidTexture() {
+                const size = 512;
+                const canvas = document.createElement('canvas');
+                canvas.width = size;
+                canvas.height = size;
+                const ctx = canvas.getContext('2d');
+
+                // Base Color
+                ctx.fillStyle = '#6b5e52'; 
+                ctx.fillRect(0, 0, size, size);
+
+                // Add Noise/Grit
+                for (let i = 0; i < 40000; i++) {
+                    const x = Math.random() * size;
+                    const y = Math.random() * size;
+                    const w = Math.random() * 2;
+                    // Vary between lighter and darker specs
+                    ctx.fillStyle = Math.random() > 0.5 ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.1)';
+                    ctx.fillRect(x, y, w, w);
+                }
+
+                // Add Visual Craters to Texture
+                for (let i = 0; i < 40; i++) {
+                    const x = Math.random() * size;
+                    const y = Math.random() * size;
+                    const radius = Math.random() * 20 + 5;
+                    
+                    const grad = ctx.createRadialGradient(x, y, radius * 0.2, x, y, radius);
+                    grad.addColorStop(0, 'rgba(30, 25, 20, 0.8)'); // Dark center
+                    grad.addColorStop(0.8, 'rgba(50, 45, 40, 0.4)');
+                    grad.addColorStop(1, 'transparent');
+                    
+                    ctx.fillStyle = grad;
+                    ctx.beginPath();
+                    ctx.arc(x, y, radius, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Highlight rim
+                    ctx.strokeStyle = 'rgba(200, 190, 180, 0.1)';
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                }
+
+                return new THREE.CanvasTexture(canvas);
+            }
+
+            // --- Helper: Generate Procedural Smoke Texture ---
+            function createSmokeTexture() {
+                const size = 128;
+                const canvas = document.createElement('canvas');
+                canvas.width = size;
+                canvas.height = size;
+                const ctx = canvas.getContext('2d');
+                
+                // Draw a soft radial gradient for a "puff"
+                const centerX = size / 2;
+                const centerY = size / 2;
+                const radius = size / 2;
+                
+                const grad = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
+                grad.addColorStop(0, 'rgba(255, 255, 255, 1)');      // Dense center
+                grad.addColorStop(0.4, 'rgba(200, 200, 200, 0.5)');  // Soft mid
+                grad.addColorStop(1, 'rgba(0, 0, 0, 0)');            // Transparent edge
+                
+                ctx.fillStyle = grad;
+                ctx.fillRect(0, 0, size, size);
+                
+                return new THREE.CanvasTexture(canvas);
+            }
+
+            // Asteroid - Physical Geometry with Craters
+            const geometry = new THREE.IcosahedronGeometry(2, 40); // High poly count for detail
+            const positionAttribute = geometry.attributes.position;
+            const vertex = new THREE.Vector3();
+            
+            // 1. Generate Random Crater Centers
+            const craters = [];
+            const craterCount = 25; // How many big dents?
+            for(let i=0; i < craterCount; i++) {
+                const center = new THREE.Vector3(
+                    Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5
+                ).normalize().multiplyScalar(2); // Surface point
+                craters.push({
+                    center: center,
+                    radius: 0.3 + Math.random() * 0.4, // Size of crater
+                    floor: 0.05 + Math.random() * 0.15 // How deep
+                });
+            }
+
+            // 2. Apply Displacement
+            for (let i = 0; i < positionAttribute.count; i++) {
+                vertex.fromBufferAttribute(positionAttribute, i);
+                
+                const originalDir = vertex.clone().normalize();
+                let displacement = 0;
+
+                // A. Base Noise (Lumpy shape)
+                const n1 = Math.sin(vertex.x * 0.8) * Math.cos(vertex.y * 0.75) * Math.sin(vertex.z * 0.6);
+                const n2 = Math.sin(vertex.x * 3.0) * Math.cos(vertex.y * 3.0) * Math.sin(vertex.z * 3.0);
+                displacement += (n1 * 0.4) + (n2 * 0.1);
+
+                // B. Crater Indentations
+                let craterDisplacement = 0;
+                for (let c = 0; c < craters.length; c++) {
+                    const crater = craters[c];
+                    const dist = vertex.distanceTo(crater.center);
+                    
+                    if (dist < crater.radius) {
+                        // Calculate depth based on distance to crater center (parabolic shape)
+                        // Normalized distance 0 (center) to 1 (edge)
+                        const normDist = dist / crater.radius;
+                        // Cosine curve for smooth crater walls
+                        const depth = Math.cos(normDist * Math.PI * 0.5) * crater.floor;
+                        
+                        // Push vertex INWARD, but create a tiny rim OUTWARD at the edge
+                        if (normDist > 0.8) {
+                            craterDisplacement += depth * 0.2; // Rim
+                        } else {
+                            craterDisplacement -= depth; // Pit
+                        }
+                    }
+                }
+                
+                // Combine
+                const finalRadius = 2 + displacement + craterDisplacement;
+                vertex.copy(originalDir).multiplyScalar(finalRadius);
+                
+                positionAttribute.setXYZ(i, vertex.x, vertex.y, vertex.z);
+            }
+            
+            geometry.computeVertexNormals();
+
+            // Material with Texture
+            const material = new THREE.MeshStandardMaterial({ 
+                map: createAsteroidTexture(),
+                color: 0x8c8c8c, // Neutral base to let texture show
+                roughness: 1.0,
+                metalness: 0.1,
+                flatShading: false
+            });
+
+            asteroid = new THREE.Mesh(geometry, material);
+            asteroid.position.z = -50; 
+            scene.add(asteroid);
+
+            camera.position.z = 5;
+
+            // --- Explosion Particles (Debris) ---
+            const particlesGeo = new THREE.BufferGeometry();
+            const particlesCount = 200;
+            const posArray = new Float32Array(particlesCount * 3);
+            const velocityArray = []; // Store velocity
+            
+            for(let i = 0; i < particlesCount * 3; i+=3) {
+                posArray[i] = 0; // x
+                posArray[i+1] = 0; // y
+                posArray[i+2] = 0; // z
+                
+                // Random velocities
+                velocityArray.push({
+                    x: (Math.random() - 0.5) * 1.5,
+                    y: (Math.random() - 0.5) * 1.5,
+                    z: (Math.random() - 0.5) * 1.5 + 0.5 // Bias towards camera slightly
+                });
+            }
+            
+            particlesGeo.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+            const particlesMat = new THREE.PointsMaterial({
+                size: 0.3,
+                color: 0xffaa00,
+                transparent: true,
+                opacity: 1
+            });
+            
+            particles = new THREE.Points(particlesGeo, particlesMat);
+            particles.visible = false;
+            particles.userData = { velocities: velocityArray };
+            scene.add(particles);
+
+            // --- Smoke Explosion ---
+            const smokeTexture = createSmokeTexture();
+            const smokeGroup = new THREE.Group();
+            const smokeCount = 25;
+            
+            for (let i = 0; i < smokeCount; i++) {
+                // Mix of dark grey and slight orange tint for "fiery smoke"
+                const shade = Math.random() > 0.5 ? 0x888888 : 0xaa6644;
+                const smokeMat = new THREE.SpriteMaterial({ 
+                    map: smokeTexture, 
+                    color: shade,
+                    transparent: true,
+                    opacity: 0.6,
+                    depthWrite: false, // Prevent z-fighting transparency issues
+                    blending: THREE.NormalBlending
+                });
+                const sprite = new THREE.Sprite(smokeMat);
+                
+                // Randomize start position slightly so they aren't all on top of each other
+                sprite.position.set(
+                    (Math.random() - 0.5) * 2,
+                    (Math.random() - 0.5) * 2,
+                    (Math.random() - 0.5) * 2
+                );
+                
+                // Random scale
+                const scale = Math.random() * 3 + 2;
+                sprite.scale.set(scale, scale, 1);
+                
+                // Store expansion physics
+                sprite.userData = {
+                    velocity: new THREE.Vector3(
+                        (Math.random() - 0.5) * 0.8,
+                        (Math.random() - 0.5) * 0.8,
+                        (Math.random() - 0.5) * 0.8 + 0.5
+                    ),
+                    expandSpeed: Math.random() * 0.1 + 0.05,
+                    rotationSpeed: (Math.random() - 0.5) * 0.05
+                };
+                
+                smokeGroup.add(sprite);
+            }
+            smokeGroup.visible = false;
+            scene.add(smokeGroup);
+
+
+            let impact = false;
+            let timeAfterImpact = 0;
+
+            function animate() {
+                if (!threeJsActive) return;
+                animationId = requestAnimationFrame(animate);
+
+                if (!impact) {
+                    // Move Asteroid towards screen
+                    asteroid.position.z += 1.5; // Speed
+                    asteroid.rotation.x += 0.05;
+                    asteroid.rotation.y += 0.05;
+
+                    // Impact Condition
+                    if (asteroid.position.z > 2) {
+                        impact = true;
+                        asteroid.visible = false;
+                        particles.visible = true;
+                        smokeGroup.visible = true;
+                        
+                        // CRACK EFFECT TRIGGER
+                        triggerCrack();
+                        
+                        // Shake the screen via CSS
+                        document.body.style.transform = `translate(${Math.random()*10-5}px, ${Math.random()*10-5}px)`;
+                        setTimeout(() => document.body.style.transform = 'none', 200);
+                    }
+                } else {
+                    // Explosion Animation
+                    timeAfterImpact++;
+                    
+                    // 1. Update Debris (Sparks)
+                    const positions = particles.geometry.attributes.position.array;
+                    const vels = particles.userData.velocities;
+                    
+                    for (let i = 0; i < vels.length; i++) {
+                        positions[i*3] += vels[i].x;
+                        positions[i*3+1] += vels[i].y;
+                        positions[i*3+2] += vels[i].z;
+                    }
+                    particles.geometry.attributes.position.needsUpdate = true;
+                    particles.material.opacity -= 0.015;
+
+                    // 2. Update Smoke
+                    smokeGroup.children.forEach(sprite => {
+                        // Move
+                        sprite.position.add(sprite.userData.velocity);
+                        // Expand
+                        sprite.scale.x += sprite.userData.expandSpeed;
+                        sprite.scale.y += sprite.userData.expandSpeed;
+                        // Rotate (Sprite material rotation property)
+                        sprite.material.rotation += sprite.userData.rotationSpeed;
+                        // Fade
+                        sprite.material.opacity -= 0.008;
+                    });
+
+                    if (particles.material.opacity <= 0 && smokeGroup.children[0].material.opacity <= 0) {
+                        // Animation complete
+                        threeJsActive = false;
+                        cancelAnimationFrame(animationId);
+                        showGameOverUI();
+                    }
+                }
+
+                renderer.render(scene, camera);
+            }
+
+            animate();
+        }
+
+        function showGameOverUI() {
+            const container = document.getElementById('explosion-canvas');
+            container.style.display = 'none'; // Hide canvas
+
+            overlay.classList.remove('hidden');
+            overlayTitle.innerText = "HULL BREACH";
+            overlayTitle.className = "hud-font text-3xl font-bold mb-2 text-center px-4 text-red-500";
+            overlayMsg.innerText = "CRITICAL IMPACT DETECTED.";
+            // Changed from explosion emoji to meteor icon
+            overlayIcon.innerHTML = '<i class="fas fa-meteor text-slate-400"></i>';
+        }
+
+        // Window resize handler for Three.js
+        window.addEventListener('resize', () => {
+            if (threeJsActive && camera && renderer) {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            }
+        });
+
+        // Start
+        initStars();
+        initGame();
+
+    </script>
+</body>
+</html>

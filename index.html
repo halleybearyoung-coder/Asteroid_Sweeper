@@ -71,6 +71,54 @@
             transition: opacity 1s ease-out;
         }
 
+        /* Banner Ads Styling */
+        .ad-banner {
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(90deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.9));
+            box-shadow: 0 0 20px rgba(6, 182, 212, 0.1);
+        }
+        
+        /* Animated Gradient Border for Ads */
+        .ad-border-glow {
+            position: absolute;
+            inset: 0;
+            border-radius: 1rem; 
+            padding: 2px; /* Border width */
+            background: linear-gradient(45deg, #0ea5e9, #6366f1, #0ea5e9);
+            background-size: 200% 200%;
+            animation: borderFlow 4s linear infinite;
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none;
+        }
+
+        @keyframes borderFlow {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* Particles inside Ads */
+        .ad-particle {
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+            pointer-events: none;
+            opacity: 0;
+            animation: floatUp 3s infinite ease-in;
+            box-shadow: 0 0 4px #22d3ee;
+        }
+
+        @keyframes floatUp {
+            0% { transform: translateY(20px) scale(0.5); opacity: 0; }
+            20% { opacity: 0.8; }
+            80% { opacity: 0.8; }
+            100% { transform: translateY(-40px) scale(0); opacity: 0; }
+        }
+
         /* Grid Cell Styling */
         .cell {
             transition: all 0.1s ease;
@@ -146,7 +194,7 @@
         }
     </style>
 </head>
-<body class="h-screen w-screen flex flex-col items-center justify-between p-4 relative">
+<body class="h-screen w-screen flex flex-col items-center justify-between p-2 md:p-4 relative">
 
     <!-- Background Stars -->
     <div id="starfield" class="stars"></div>
@@ -171,43 +219,60 @@
         </svg>
     </div>
 
+    <!-- TOP AD BANNER (Google AdSense Placeholder) -->
+    <div class="w-full max-w-lg my-2 min-h-[60px] flex justify-center items-center bg-slate-900/50 rounded-lg overflow-hidden border border-slate-700/50">
+        <!-- PASTE YOUR AD CODE HERE -->
+        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXXXXX"
+             crossorigin="anonymous"></script>
+        <!-- AsteroidSweeper_Top -->
+        <ins class="adsbygoogle"
+             style="display:block; width: 100%;"
+             data-ad-client="ca-pub-XXXXXXXXXXXXXXXX"
+             data-ad-slot="TOP_AD_SLOT_ID"
+             data-ad-format="auto"
+             data-full-width-responsive="true"></ins>
+        <script>
+             (adsbygoogle = window.adsbygoogle || []).push({});
+        </script>
+    </div>
+
     <!-- Header / HUD -->
-    <div class="w-full max-w-lg z-10 flex flex-col gap-4">
-        <div class="flex justify-between items-center bg-slate-800/80 backdrop-blur-md p-4 rounded-xl border border-slate-700 shadow-xl">
+    <div class="w-full max-w-lg z-10 flex flex-col gap-2 shrink-0">
+        <div class="flex justify-between items-center bg-slate-800/80 backdrop-blur-md p-3 md:p-4 rounded-xl border border-slate-700 shadow-xl">
             <div class="flex flex-col">
-                <h1 class="hud-font text-xl md:text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-blue-500 tracking-wider uppercase">
+                <h1 class="hud-font text-lg md:text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-blue-500 tracking-wider uppercase">
                     Asteroid Sweeper
                 </h1>
-                <div class="text-xs text-slate-400 tracking-widest">SECTOR SCANNER ONLINE</div>
+                <div class="text-[10px] md:text-xs text-slate-400 tracking-widest">SECTOR SCANNER ONLINE</div>
             </div>
             
-            <button onclick="initGame()" class="group relative px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg border border-slate-500 transition-all active:scale-95">
+            <button onclick="initGame()" class="group relative px-3 py-1 md:px-4 md:py-2 bg-slate-700 hover:bg-slate-600 rounded-lg border border-slate-500 transition-all active:scale-95">
                 <i class="fas fa-redo text-cyan-400 group-hover:rotate-180 transition-transform duration-500"></i>
             </button>
         </div>
 
         <!-- Stats Bar -->
-        <div class="grid grid-cols-3 gap-3">
-            <div class="bg-slate-900/90 p-3 rounded-lg border border-slate-700 flex flex-col items-center justify-center shadow-lg">
-                <span class="text-xs text-slate-500 uppercase tracking-widest mb-1">Asteroids</span>
-                <span id="mine-count" class="hud-font text-2xl text-red-400 font-mono">010</span>
+        <div class="grid grid-cols-3 gap-2 md:gap-3">
+            <div class="bg-slate-900/90 p-2 md:p-3 rounded-lg border border-slate-700 flex flex-col items-center justify-center shadow-lg">
+                <span class="text-[10px] md:text-xs text-slate-500 uppercase tracking-widest mb-1">Asteroids</span>
+                <span id="mine-count" class="hud-font text-xl md:text-2xl text-red-400 font-mono">010</span>
             </div>
             
-            <div class="bg-slate-900/90 p-3 rounded-lg border border-slate-700 flex flex-col items-center justify-center shadow-lg cursor-pointer hover:bg-slate-800 transition-colors" onclick="toggleDifficulty()">
-                <span class="text-xs text-slate-500 uppercase tracking-widest mb-1">Level</span>
-                <span id="difficulty-display" class="hud-font text-xl text-yellow-400">EASY</span>
+            <div class="bg-slate-900/90 p-2 md:p-3 rounded-lg border border-slate-700 flex flex-col items-center justify-center shadow-lg cursor-pointer hover:bg-slate-800 transition-colors" onclick="toggleDifficulty()">
+                <span class="text-[10px] md:text-xs text-slate-500 uppercase tracking-widest mb-1">Level</span>
+                <span id="difficulty-display" class="hud-font text-lg md:text-xl text-yellow-400">EASY</span>
             </div>
 
-            <div class="bg-slate-900/90 p-3 rounded-lg border border-slate-700 flex flex-col items-center justify-center shadow-lg">
-                <span class="text-xs text-slate-500 uppercase tracking-widest mb-1">Time</span>
-                <span id="timer" class="hud-font text-2xl text-cyan-400 font-mono">000</span>
+            <div class="bg-slate-900/90 p-2 md:p-3 rounded-lg border border-slate-700 flex flex-col items-center justify-center shadow-lg">
+                <span class="text-[10px] md:text-xs text-slate-500 uppercase tracking-widest mb-1">Time</span>
+                <span id="timer" class="hud-font text-xl md:text-2xl text-cyan-400 font-mono">000</span>
             </div>
         </div>
     </div>
 
     <!-- Game Grid Container -->
-    <div class="flex-1 flex items-center justify-center w-full max-w-2xl z-10 my-4 overflow-hidden relative">
-        <div class="relative bg-slate-900/50 p-1 md:p-4 rounded-xl border border-slate-700/50 backdrop-blur-sm shadow-2xl overflow-auto max-h-full max-w-full">
+    <div class="flex-1 flex items-center justify-center w-full max-w-2xl z-10 my-2 overflow-hidden relative">
+        <div class="relative bg-slate-900/50 p-1 md:p-4 rounded-xl border border-slate-700/50 backdrop-blur-sm shadow-2xl overflow-auto max-h-full max-w-full custom-scroll">
             <div id="game-grid" class="grid gap-1 mx-auto touch-manipulation">
                 <!-- Grid generated by JS -->
             </div>
@@ -225,7 +290,7 @@
     </div>
 
     <!-- Controls (Mobile/Desktop) -->
-    <div class="w-full max-w-lg z-10 mb-4 px-4">
+    <div class="w-full max-w-lg z-10 mb-2 px-1 md:px-4 shrink-0">
         <!-- Desktop Instructions -->
         <div class="hidden md:flex justify-between text-sm text-slate-400 font-mono bg-slate-900/50 p-2 rounded border border-slate-800">
             <span><i class="fas fa-mouse-pointer text-cyan-400 mr-2"></i>Left Click: Scan</span>
@@ -241,6 +306,23 @@
                 <i class="fas fa-flag"></i> FLAG
             </button>
         </div>
+    </div>
+
+    <!-- BOTTOM AD BANNER (Google AdSense Placeholder) -->
+    <div class="w-full max-w-lg my-2 min-h-[60px] flex justify-center items-center bg-slate-900/50 rounded-lg overflow-hidden border border-slate-700/50">
+        <!-- PASTE YOUR AD CODE HERE -->
+        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXXXXX"
+             crossorigin="anonymous"></script>
+        <!-- AsteroidSweeper_Bottom -->
+        <ins class="adsbygoogle"
+             style="display:block; width: 100%;"
+             data-ad-client="ca-pub-XXXXXXXXXXXXXXXX"
+             data-ad-slot="BOTTOM_AD_SLOT_ID"
+             data-ad-format="auto"
+             data-full-width-responsive="true"></ins>
+        <script>
+             (adsbygoogle = window.adsbygoogle || []).push({});
+        </script>
     </div>
 
     <script>
@@ -278,6 +360,37 @@
         const overlayIcon = document.getElementById('overlay-icon');
         const explosionCanvasContainer = document.getElementById('explosion-canvas');
         const crackOverlay = document.getElementById('crack-overlay');
+
+        // --- Ad Particle System ---
+        function initAdParticles() {
+            const containers = document.querySelectorAll('.ad-particles-container');
+            containers.forEach(container => {
+                const particleCount = 8;
+                for(let i=0; i<particleCount; i++) {
+                    createAdParticle(container);
+                }
+            });
+        }
+
+        function createAdParticle(container) {
+            const p = document.createElement('div');
+            p.className = 'ad-particle';
+            
+            // Randomize Props
+            const size = Math.random() * 2 + 1; // 1-3px
+            const left = Math.random() * 100; // 0-100%
+            const duration = Math.random() * 2 + 2; // 2-4s
+            const delay = Math.random() * 2; // 0-2s start delay
+            
+            p.style.width = size + 'px';
+            p.style.height = size + 'px';
+            p.style.left = left + '%';
+            p.style.bottom = '-5px'; // Start slightly below
+            p.style.animationDuration = duration + 's';
+            p.style.animationDelay = delay + 's';
+            
+            container.appendChild(p);
+        }
 
         // --- Initialization ---
         function initStars() {
@@ -927,7 +1040,7 @@
         // Start
         initStars();
         initGame();
-
+        // initAdParticles(); // Disabled: Real ads are now in place
     </script>
 </body>
 </html>

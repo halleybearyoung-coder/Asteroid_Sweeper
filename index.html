@@ -172,24 +172,9 @@
         </svg>
     </div>
 
-    <!-- TOP AD BANNER -->
-    <div class="w-full max-w-lg my-2 min-h-[90px] flex justify-center items-center bg-slate-900/50 rounded-lg overflow-hidden border border-slate-700/50 relative">
-        <div class="absolute inset-0 flex items-center justify-center text-slate-600 text-xs font-mono border border-dashed border-slate-600/30 m-2 rounded">
-            [TOP AD BANNER - APPEARS ON LIVE SITE]
-        </div>
-        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2703284471089646"
-             crossorigin="anonymous"></script>
-        <!-- AsteroidSweeper_Top -->
-        <ins class="adsbygoogle relative z-10"
-             style="display:block; width: 100%;"
-             data-ad-client="ca-pub-2703284471089646"
-             data-ad-slot="TOP_AD_SLOT_ID"
-             data-ad-format="auto"
-             data-full-width-responsive="true"></ins>
-        <script>
-             (adsbygoogle = window.adsbygoogle || []).push({});
-        </script>
-    </div>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2703284471089646"
+     crossorigin="anonymous"></script>
+
 
     <!-- Header / HUD -->
     <div class="w-full max-w-lg z-10 flex flex-col gap-2 shrink-0">
@@ -264,21 +249,24 @@
     </div>
 
     <!-- BOTTOM AD BANNER -->
-    <div class="w-full max-w-lg my-2 min-h-[90px] flex justify-center items-center bg-slate-900/50 rounded-lg overflow-hidden border border-slate-700/50 relative">
-        <div class="absolute inset-0 flex items-center justify-center text-slate-600 text-xs font-mono border border-dashed border-slate-600/30 m-2 rounded">
+    <div class="w-full max-w-lg my-2 min-h-[90px] block bg-slate-900/50 rounded-lg overflow-hidden border border-slate-700/50 relative">
+        <div class="absolute inset-0 flex items-center justify-center text-slate-600 text-xs font-mono border border-dashed border-slate-600/30 m-2 rounded pointer-events-none">
             [BOTTOM AD BANNER - APPEARS ON LIVE SITE]
         </div>
         <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2703284471089646"
              crossorigin="anonymous"></script>
         <!-- AsteroidSweeper_Bottom -->
         <ins class="adsbygoogle relative z-10"
-             style="display:block; width: 100%;"
+             style="display:block; width: 100%; min-width: 300px; min-height: 90px;"
              data-ad-client="ca-pub-2703284471089646"
              data-ad-slot="BOTTOM_AD_SLOT_ID"
              data-ad-format="auto"
              data-full-width-responsive="true"></ins>
         <script>
-             (adsbygoogle = window.adsbygoogle || []).push({});
+            // Delay ad push to ensure layout is calculated, preventing availableWidth=0 errors
+            setTimeout(() => {
+                (adsbygoogle = window.adsbygoogle || []).push({});
+            }, 1000);
         </script>
     </div>
 
@@ -678,77 +666,78 @@
             scene.add(directionalLight);
 
             // --- Helper: Generate Procedural Rock Texture ---
-            function createAsteroidTexture() {
-                const size = 512;
-                const canvas = document.createElement('canvas');
-                canvas.width = size;
-                canvas.height = size;
-                const ctx = canvas.getContext('2d');
+        function createAsteroidTexture() {
+            const size = 512;
+            const canvas = document.createElement('canvas');
+            canvas.width = size;
+            canvas.height = size;
+            const ctx = canvas.getContext('2d');
 
-                // Base Color
-                ctx.fillStyle = '#6b5e52'; 
-                ctx.fillRect(0, 0, size, size);
+            // Base Color
+            ctx.fillStyle = '#6b5e52'; 
+            ctx.fillRect(0, 0, size, size);
 
-                // Add Noise/Grit
-                for (let i = 0; i < 40000; i++) {
-                    const x = Math.random() * size;
-                    const y = Math.random() * size;
-                    const w = Math.random() * 2;
-                    // Vary between lighter and darker specs
-                    ctx.fillStyle = Math.random() > 0.5 ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.1)';
-                    ctx.fillRect(x, y, w, w);
-                }
-
-                // Add Visual Craters to Texture
-                for (let i = 0; i < 40; i++) {
-                    const x = Math.random() * size;
-                    const y = Math.random() * size;
-                    const radius = Math.random() * 20 + 5;
-                    
-                    const grad = ctx.createRadialGradient(x, y, radius * 0.2, x, y, radius);
-                    grad.addColorStop(0, 'rgba(30, 25, 20, 0.8)'); // Dark center
-                    grad.addColorStop(0.8, 'rgba(50, 45, 40, 0.4)');
-                    grad.addColorStop(1, 'transparent');
-                    
-                    ctx.fillStyle = grad;
-                    ctx.beginPath();
-                    ctx.arc(x, y, radius, 0, Math.PI * 2);
-                    ctx.fill();
-                    
-                    // Highlight rim
-                    ctx.strokeStyle = 'rgba(200, 190, 180, 0.1)';
-                    ctx.lineWidth = 1;
-                    ctx.stroke();
-                }
-
-                return new THREE.CanvasTexture(canvas);
+            // Add Noise/Grit
+            for (let i = 0; i < 40000; i++) {
+                const x = Math.random() * size;
+                const y = Math.random() * size;
+                const w = Math.random() * 2;
+                // Vary between lighter and darker specs
+                ctx.fillStyle = Math.random() > 0.5 ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.1)';
+                ctx.fillRect(x, y, w, w);
             }
 
-            // --- Helper: Generate Procedural Smoke Texture ---
-            function createSmokeTexture() {
-                const size = 128;
-                const canvas = document.createElement('canvas');
-                canvas.width = size;
-                canvas.height = size;
-                const ctx = canvas.getContext('2d');
+            // Add Visual Craters to Texture
+            for (let i = 0; i < 40; i++) {
+                const x = Math.random() * size;
+                const y = Math.random() * size;
+                const radius = Math.random() * 20 + 5;
                 
-                // Draw a soft radial gradient for a "puff"
-                const centerX = size / 2;
-                const centerY = size / 2;
-                const radius = size / 2;
-                
-                const grad = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
-                grad.addColorStop(0, 'rgba(255, 255, 255, 1)');      // Dense center
-                grad.addColorStop(0.4, 'rgba(200, 200, 200, 0.5)');  // Soft mid
-                grad.addColorStop(1, 'rgba(0, 0, 0, 0)');            // Transparent edge
+                const grad = ctx.createRadialGradient(x, y, radius * 0.2, x, y, radius);
+                grad.addColorStop(0, 'rgba(30, 25, 20, 0.8)'); // Dark center
+                grad.addColorStop(0.8, 'rgba(50, 45, 40, 0.4)');
+                grad.addColorStop(1, 'transparent');
                 
                 ctx.fillStyle = grad;
-                ctx.fillRect(0, 0, size, size);
+                ctx.beginPath();
+                ctx.arc(x, y, radius, 0, Math.PI * 2);
+                ctx.fill();
                 
-                return new THREE.CanvasTexture(canvas);
+                // Highlight rim
+                ctx.strokeStyle = 'rgba(200, 190, 180, 0.1)';
+                ctx.lineWidth = 1;
+                ctx.stroke();
             }
+            
+            // Return the canvas directly so we can grab the image data URL if needed
+            return canvas;
+        }
 
-            // Asteroid - Physical Geometry with Craters
+        // --- Helper: Generate Procedural Smoke Texture ---
+        function createSmokeTexture() {
+                const size = 128;
+            const canvas = document.createElement('canvas');
+            canvas.width = size;
+            canvas.height = size;
+            const ctx = canvas.getContext('2d');
+            
+            // Draw a soft radial gradient for a "puff"
+            const centerX = size / 2;
+            const centerY = size / 2;
+            const radius = size / 2;
+            
+            const grad = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
+            grad.addColorStop(0, 'rgba(255, 255, 255, 1)');      // Dense center
+            grad.addColorStop(0.4, 'rgba(200, 200, 200, 0.5)');  // Soft mid
+            grad.addColorStop(1, 'rgba(0, 0, 0, 0)');            // Transparent edge
+            
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, size, size);
+            
+            return new THREE.CanvasTexture(canvas);
+        }
+
+        // Asteroid - Physical Geometry with Craters
             const geometry = new THREE.IcosahedronGeometry(2, 40); // High poly count for detail
             const positionAttribute = geometry.attributes.position;
             const vertex = new THREE.Vector3();
@@ -811,8 +800,12 @@
             geometry.computeVertexNormals();
 
             // Material with Texture
+            // UPDATE: Call the helper and wrap in CanvasTexture
+            const asteroidCanvas = createAsteroidTexture();
+            const asteroidTex = new THREE.CanvasTexture(asteroidCanvas);
+
             const material = new THREE.MeshStandardMaterial({ 
-                map: createAsteroidTexture(),
+                map: asteroidTex,
                 color: 0x8c8c8c, // Neutral base to let texture show
                 roughness: 1.0,
                 metalness: 0.1,
@@ -981,8 +974,33 @@
             overlayTitle.innerText = "HULL BREACH";
             overlayTitle.className = "hud-font text-3xl font-bold mb-2 text-center px-4 text-red-500";
             overlayMsg.innerText = "CRITICAL IMPACT DETECTED.";
-            // Changed from explosion emoji to meteor icon
-            overlayIcon.innerHTML = '<i class="fas fa-meteor text-slate-400"></i>';
+            
+            // Generate a snapshot of the asteroid texture to use as the icon
+            const astCanvas = createAsteroidTexture();
+            // Create a masked circular version for the icon
+            const iconCanvas = document.createElement('canvas');
+            iconCanvas.width = 128;
+            iconCanvas.height = 128;
+            const ctx = iconCanvas.getContext('2d');
+            
+            // Draw circle mask
+            ctx.beginPath();
+            ctx.arc(64, 64, 60, 0, Math.PI * 2);
+            ctx.closePath();
+            ctx.clip();
+            
+            // Draw asteroid texture
+            ctx.drawImage(astCanvas, 0, 0, 128, 128);
+            
+            // Add shadow overlay for spherical look
+            const grad = ctx.createRadialGradient(40, 40, 10, 64, 64, 64);
+            grad.addColorStop(0, 'rgba(255,255,255,0.2)');
+            grad.addColorStop(1, 'rgba(0,0,0,0.6)');
+            ctx.fillStyle = grad;
+            ctx.fill();
+
+            // Set as image
+            overlayIcon.innerHTML = `<img src="${iconCanvas.toDataURL()}" class="w-24 h-24 rounded-full border-4 border-red-900/50 shadow-[0_0_30px_rgba(239,68,68,0.4)] animate-pulse">`;
         }
 
         // Window resize handler for Three.js

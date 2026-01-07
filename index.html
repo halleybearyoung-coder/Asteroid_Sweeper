@@ -1,8 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2703284471089646"
-     crossorigin="anonymous"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Asteroid Sweeper</title>
@@ -16,7 +14,8 @@
             background-color: #0f172a;
             font-family: 'Rajdhani', sans-serif;
             color: #e2e8f0;
-            overflow: hidden; /* Prevent scrolling on mobile during game */
+            overflow-x: hidden; /* Allow vertical scroll, prevent horizontal */
+            overflow-y: auto; /* ENABLE SCROLLING */
             touch-action: manipulation;
         }
 
@@ -29,7 +28,7 @@
             position: fixed;
             top: 0;
             left: 0;
-            width: 100%;xf
+            width: 100%;
             height: 100%;
             pointer-events: none;
             z-index: -1;
@@ -71,54 +70,6 @@
             pointer-events: none; /* Let clicks pass through */
             opacity: 0;
             transition: opacity 1s ease-out;
-        }
-
-        /* Banner Ads Styling */
-        .ad-banner {
-            position: relative;
-            overflow: hidden;
-            background: linear-gradient(90deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.9));
-            box-shadow: 0 0 20px rgba(6, 182, 212, 0.1);
-        }
-        
-        /* Animated Gradient Border for Ads */
-        .ad-border-glow {
-            position: absolute;
-            inset: 0;
-            border-radius: 1rem; 
-            padding: 2px; /* Border width */
-            background: linear-gradient(45deg, #0ea5e9, #6366f1, #0ea5e9);
-            background-size: 200% 200%;
-            animation: borderFlow 4s linear infinite;
-            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-            mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-            -webkit-mask-composite: xor;
-            mask-composite: exclude;
-            pointer-events: none;
-        }
-
-        @keyframes borderFlow {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-        }
-
-        /* Particles inside Ads */
-        .ad-particle {
-            position: absolute;
-            background: white;
-            border-radius: 50%;
-            pointer-events: none;
-            opacity: 0;
-            animation: floatUp 3s infinite ease-in;
-            box-shadow: 0 0 4px #22d3ee;
-        }
-
-        @keyframes floatUp {
-            0% { transform: translateY(20px) scale(0.5); opacity: 0; }
-            20% { opacity: 0.8; }
-            80% { opacity: 0.8; }
-            100% { transform: translateY(-40px) scale(0); opacity: 0; }
         }
 
         /* Grid Cell Styling */
@@ -196,7 +147,7 @@
         }
     </style>
 </head>
-<body class="h-screen w-screen flex flex-col items-center justify-between p-2 md:p-4 relative">
+<body class="min-h-screen w-screen flex flex-col items-center justify-start p-2 md:p-4 relative">
 
     <!-- Background Stars -->
     <div id="starfield" class="stars"></div>
@@ -221,13 +172,15 @@
         </svg>
     </div>
 
-    <!-- TOP AD BANNER (Google AdSense Placeholder) -->
-    <div class="w-full max-w-lg my-2 min-h-[60px] flex justify-center items-center bg-slate-900/50 rounded-lg overflow-hidden border border-slate-700/50">
-        <!-- PASTE YOUR AD CODE HERE -->
+    <!-- TOP AD BANNER -->
+    <div class="w-full max-w-lg my-2 min-h-[90px] flex justify-center items-center bg-slate-900/50 rounded-lg overflow-hidden border border-slate-700/50 relative">
+        <div class="absolute inset-0 flex items-center justify-center text-slate-600 text-xs font-mono border border-dashed border-slate-600/30 m-2 rounded">
+            [TOP AD BANNER - APPEARS ON LIVE SITE]
+        </div>
         <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2703284471089646"
              crossorigin="anonymous"></script>
         <!-- AsteroidSweeper_Top -->
-        <ins class="adsbygoogle"
+        <ins class="adsbygoogle relative z-10"
              style="display:block; width: 100%;"
              data-ad-client="ca-pub-2703284471089646"
              data-ad-slot="TOP_AD_SLOT_ID"
@@ -273,8 +226,8 @@
     </div>
 
     <!-- Game Grid Container -->
-    <div class="flex-1 flex items-center justify-center w-full max-w-2xl z-10 my-2 overflow-hidden relative">
-        <div class="relative bg-slate-900/50 p-1 md:p-4 rounded-xl border border-slate-700/50 backdrop-blur-sm shadow-2xl overflow-auto max-h-full max-w-full custom-scroll">
+    <div class="flex-1 flex items-center justify-center w-full max-w-2xl z-10 my-2 relative min-h-[300px]">
+        <div class="relative bg-slate-900/50 p-1 md:p-4 rounded-xl border border-slate-700/50 backdrop-blur-sm shadow-2xl overflow-auto w-full max-h-[60vh] custom-scroll">
             <div id="game-grid" class="grid gap-1 mx-auto touch-manipulation">
                 <!-- Grid generated by JS -->
             </div>
@@ -310,13 +263,15 @@
         </div>
     </div>
 
-    <!-- BOTTOM AD BANNER (Google AdSense Placeholder) -->
-    <div class="w-full max-w-lg my-2 min-h-[60px] flex justify-center items-center bg-slate-900/50 rounded-lg overflow-hidden border border-slate-700/50">
-        <!-- PASTE YOUR AD CODE HERE -->
+    <!-- BOTTOM AD BANNER -->
+    <div class="w-full max-w-lg my-2 min-h-[90px] flex justify-center items-center bg-slate-900/50 rounded-lg overflow-hidden border border-slate-700/50 relative">
+        <div class="absolute inset-0 flex items-center justify-center text-slate-600 text-xs font-mono border border-dashed border-slate-600/30 m-2 rounded">
+            [BOTTOM AD BANNER - APPEARS ON LIVE SITE]
+        </div>
         <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2703284471089646"
              crossorigin="anonymous"></script>
         <!-- AsteroidSweeper_Bottom -->
-        <ins class="adsbygoogle"
+        <ins class="adsbygoogle relative z-10"
              style="display:block; width: 100%;"
              data-ad-client="ca-pub-2703284471089646"
              data-ad-slot="BOTTOM_AD_SLOT_ID"
